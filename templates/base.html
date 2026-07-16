@@ -44,7 +44,7 @@
                         <a class="app-nav__link app-nav__link--slate" href="{{ url_for('attendance_history') }}"><i class="fas fa-clock-rotate-left"></i><span>Lịch sử</span></a>
                     </li>
                     <li class="nav-item">
-                        <a class="app-nav__link app-nav__link--rose" href="{{ url_for('test_management') }}"><i class="fas fa-file-pen"></i><span>Bài kiểm tra</span></a>
+                        <a class="app-nav__link app-nav__link--rose" href="{{ url_for('test_management') }}"><i class="fas fa-file-pen"></i><span>Kiểm tra</span></a>
                     </li>
                     {% endif %}
                     {% if current_user.role == 'admin' %}
