@@ -34,6 +34,7 @@ TIME_SLOT_2 = 'Ca 2: 19h30 - 21h'
 DOUBLE_SLOT_VALUE = '__double_slot__'
 ATTENDANCE_COMMENT_SUPPORTED = hasattr(Attendance, 'comment')
 DEFAULT_TEST_ATTEMPT_COUNT = 10
+TUITION_RATE_PER_PRESENT = 120000
 TEST_SCORE_PATTERN = re.compile(r'^(?:10(?:\.0+)?|[0-9](?:\.\d+)?)$')
 TEST_ATTEMPT_LABELS = {
     1: 'Lần 1',
@@ -112,6 +113,27 @@ def sort_students_for_display(students_list):
             student.name or ''
         )
     )
+
+
+def get_present_counts_for_month(student_ids, month, year):
+    if not student_ids:
+        return {}
+
+    start_of_month = date(year, month, 1)
+    last_day = calendar.monthrange(year, month)[1]
+    end_of_month = date(year, month, last_day)
+
+    present_counts = db.session.query(
+        Attendance.student_id,
+        func.count(Attendance.id)
+    ).filter(
+        Attendance.student_id.in_(student_ids),
+        Attendance.date >= start_of_month,
+        Attendance.date <= end_of_month,
+        Attendance.status == 'present'
+    ).group_by(Attendance.student_id).all()
+
+    return {student_id: count for student_id, count in present_counts}
 
 
 def parse_optional_score(raw_value):
@@ -880,15 +902,36 @@ def tuition_management():
     # Create a CustomPagination object for rendering in the template
     students_pagination = CustomPagination(students, page, per_page, total)
 
+    present_counts = get_present_counts_for_month([student.id for student in sorted_students], month, year)
+    tuition_records = {
+        tuition.student_id: tuition
+        for tuition in Tuition.query.filter(
+            Tuition.student_id.in_([student.id for student in sorted_students]),
+            Tuition.month == month,
+            Tuition.year == year
+        ).all()
+    }
+
     tuition_data = []
+    tuition_records_changed = False
     for student in students:
-        tuition = Tuition.query.filter_by(student_id=student.id, month=month, year=year).first()
+        calculated_amount = present_counts.get(student.id, 0) * TUITION_RATE_PER_PRESENT
+        tuition = tuition_records.get(student.id)
         if not tuition:
-            # Create a default tuition record if it doesn't exist
-            amount = student.default_monthly_fee
-            tuition = Tuition(student_id=student.id, month=month, year=year, amount_due=amount, is_paid=False)
+            tuition = Tuition(
+                student_id=student.id,
+                month=month,
+                year=year,
+                amount_due=calculated_amount,
+                is_paid=False
+            )
             db.session.add(tuition)
-            db.session.commit()
+            db.session.flush()
+            tuition_records[student.id] = tuition
+            tuition_records_changed = True
+        elif tuition.amount_due != calculated_amount:
+            tuition.amount_due = calculated_amount
+            tuition_records_changed = True
 
         # Apply custom fee if it exists
         display_amount = tuition.custom_fee if tuition.custom_fee is not None else tuition.amount_due
@@ -909,6 +952,33 @@ def tuition_management():
                 'custom_fee': tuition.custom_fee
             })
 
+    remaining_students = [student for student in sorted_students if student.id not in tuition_records]
+    for student in remaining_students:
+        calculated_amount = present_counts.get(student.id, 0) * TUITION_RATE_PER_PRESENT
+        tuition = Tuition(
+            student_id=student.id,
+            month=month,
+            year=year,
+            amount_due=calculated_amount,
+            is_paid=False
+        )
+        db.session.add(tuition)
+        tuition_records[student.id] = tuition
+        tuition_records_changed = True
+
+    for student in sorted_students:
+        tuition = tuition_records.get(student.id)
+        if not tuition:
+            continue
+
+        calculated_amount = present_counts.get(student.id, 0) * TUITION_RATE_PER_PRESENT
+        if tuition.amount_due != calculated_amount:
+            tuition.amount_due = calculated_amount
+            tuition_records_changed = True
+
+    if tuition_records_changed:
+        db.session.commit()
+
     # Get all unique grades for the filter dropdown and sort them numerically
     raw_grades = db.session.query(Student.grade).distinct().all()
     processed_grades = []
@@ -928,12 +998,9 @@ def tuition_management():
     # Calculate total collected and uncollected amounts for ALL tuition records of the month
     all_tuition_data = []
     for student in sorted_students:
-        tuition = Tuition.query.filter_by(student_id=student.id, month=month, year=year).first()
+        tuition = tuition_records.get(student.id)
         if not tuition:
-            amount = student.default_monthly_fee
-            tuition = Tuition(student_id=student.id, month=month, year=year, amount_due=amount, is_paid=False)
-            db.session.add(tuition)
-            db.session.commit()
+            continue
 
         display_amount = tuition.custom_fee if tuition.custom_fee is not None else tuition.amount_due
 

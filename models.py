@@ -38,7 +38,7 @@ class Student(db.Model):
     id_check = db.Column(db.String(50), unique=True, nullable=True) # Add IdCheck field
     last_update_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     schedules = db.relationship('Schedule', backref='student', lazy=True)
-    default_monthly_fee = db.Column(db.Integer, default=900000, nullable=False)
+    default_monthly_fee = db.Column(db.Integer, default=0, nullable=False)
     # No direct relationship to Attendance here, as Attendance is in a different database.
 
 class Tuition(db.Model):
