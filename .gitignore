@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Local runtime data
+instance/*.db
+instance/*.sqlite
+instance/*.sqlite3
+uploads/
+backups/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Codex / local helper state
+.agents/
+codex_test_header_backup_*/
