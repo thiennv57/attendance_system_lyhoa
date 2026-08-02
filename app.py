@@ -864,11 +864,14 @@ def tuition_management():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 50, type=int) # Default to 50 items per page
 
-    current_month = datetime.now().month
-    current_year = datetime.now().year
+    today = datetime.now().date()
+    previous_month_date = today.replace(day=1) - timedelta(days=1)
+    default_month = previous_month_date.month
+    default_year = previous_month_date.year
+    current_year = today.year
 
-    month = int(request.args.get('month', current_month))
-    year = int(request.args.get('year', current_year))
+    month = int(request.args.get('month', default_month))
+    year = int(request.args.get('year', default_year))
     search_query = request.args.get('search_query', '').strip()
     grade_filter = request.args.get('grade_filter', 'all')
     payment_status = request.args.get('payment_status', 'all')
