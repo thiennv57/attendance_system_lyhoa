@@ -302,6 +302,20 @@ body {
     color: #5a5c69;
 }
 
+.tuition-row--paid,
+.tuition-row--paid td {
+    background-color: #e9f9ee;
+}
+
+.tuition-row--unpaid,
+.tuition-row--unpaid td {
+    background-color: #fff4e5;
+}
+
+.tuition-row:hover td {
+    filter: brightness(0.98);
+}
+
 .test-management__exam-link {
     display: inline-block;
     color: inherit;

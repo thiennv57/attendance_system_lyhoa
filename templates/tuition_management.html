@@ -10,7 +10,6 @@
         <p><strong>Tổng số tiền chưa thu:</strong> {{ "{:,.0f}".format(total_uncollected_amount) }} VNĐ</p>
     </div>
 
-    <!-- Filter Section -->
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <h6 class="m-0 font-weight-bold text-primary">Bộ lọc Học phí</h6>
@@ -55,7 +54,6 @@
                     <input type="text" name="search_query" id="search_query" class="form-control form-control-sm" value="{{ search_query }}" placeholder="Tên học sinh">
                 </div>
                 <button type="submit" class="btn btn-primary btn-sm mb-2">Lọc</button>
-
             </form>
         </div>
     </div>
@@ -71,9 +69,6 @@
         </div>
     </div>
 
-
-
-    <!-- Tuition Data Table -->
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <h6 class="m-0 font-weight-bold text-primary">Danh sách Học phí</h6>
@@ -90,22 +85,22 @@
                                     <th>ID Học sinh</th>
                                     <th>Tên Học sinh</th>
                                     <th>Khối học</th>
+                                    <th>Số tiền phải đóng</th>
                                     <th>SĐT Bố</th>
                                     <th>SĐT Mẹ</th>
-                                    <th>Số tiền phải đóng</th>
                                     <th>Trạng thái</th>
                                     <th>Hành động</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for tuition in tuition_data %}
-                                <tr>
+                                <tr class="{% if tuition.is_paid %}tuition-row tuition-row--paid{% else %}tuition-row tuition-row--unpaid{% endif %}">
                                     <td>{{ tuition.student_id }}</td>
                                     <td>{{ tuition.student_name }}</td>
                                     <td>{{ tuition.grade }}</td>
+                                    <td>{{ "{:,.0f}".format(tuition.amount_due) }}</td>
                                     <td><a href="https://zalo.me/{{ tuition.father_phone }}" target="_blank">{{ tuition.father_phone if tuition.father_phone else 'N/A' }}</a></td>
                                     <td><a href="https://zalo.me/{{ tuition.mother_phone }}" target="_blank">{{ tuition.mother_phone if tuition.mother_phone else 'N/A' }}</a></td>
-                                    <td>{{ "{:,.0f}".format(tuition.amount_due) }}</td>
                                     <td>
                                         <input type="hidden" name="tuition_ids" value="{{ tuition.tuition_id }}">
                                         <input type="checkbox" name="is_paid_{{ tuition.tuition_id }}" class="tuition-checkbox" {% if tuition.is_paid %}checked{% endif %}>
@@ -131,83 +126,81 @@
                         <button type="submit" class="btn btn-primary btn-sm">Cập nhật</button>
                     </div>
                 </form>
-</div>
-
-<!-- Edit Custom Fee Modal -->
-<div class="modal fade" id="editCustomFeeModal" tabindex="-1" role="dialog" aria-labelledby="editCustomFeeModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editCustomFeeModalLabel">Chỉnh sửa Học phí tùy chỉnh</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ url_for('update_tuition_fee') }}" method="POST">
-                <div class="modal-body">
-                    <input type="hidden" name="tuition_id" id="modal_tuition_id">
-                    <input type="hidden" name="month" id="modal_month">
-                    <input type="hidden" name="year" id="modal_year">
-                    <input type="hidden" name="search_query" id="modal_search_query">
-                    <input type="hidden" name="return_to" id="modal_return_to">
-                    <div class="form-group mb-3">
-                        <label for="modal_student_name" class="form-label">Học sinh:</label>
-                        <input type="text" class="form-control" id="modal_student_name" readonly>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label for="custom_fee" class="form-label">Mức học phí tùy chỉnh (để trống để dùng mặc định):</label>
-                        <input type="number" class="form-control" id="custom_fee" name="custom_fee" step="1000">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
-                </div>
-            </form>
         </div>
     </div>
-</div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var editCustomFeeModalElement = document.getElementById('editCustomFeeModal');
-        var editCustomFeeModal = new bootstrap.Modal(editCustomFeeModalElement);
+    <div class="modal fade" id="editCustomFeeModal" tabindex="-1" role="dialog" aria-labelledby="editCustomFeeModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCustomFeeModalLabel">Chỉnh sửa Học phí tùy chỉnh</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ url_for('update_tuition_fee') }}" method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="tuition_id" id="modal_tuition_id">
+                        <input type="hidden" name="month" id="modal_month">
+                        <input type="hidden" name="year" id="modal_year">
+                        <input type="hidden" name="search_query" id="modal_search_query">
+                        <input type="hidden" name="return_to" id="modal_return_to">
+                        <div class="form-group mb-3">
+                            <label for="modal_student_name" class="form-label">Học sinh:</label>
+                            <input type="text" class="form-control" id="modal_student_name" readonly>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="custom_fee" class="form-label">Mức học phí tùy chỉnh (để trống để dùng mặc định):</label>
+                            <input type="number" class="form-control" id="custom_fee" name="custom_fee" step="1000">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-        document.querySelectorAll('.edit-tuition-btn').forEach(button => {
-            button.addEventListener('click', function () {
-                console.log('Edit tuition button clicked'); // Add this line
-                var tuitionId = this.getAttribute('data-tuition-id');
-                var studentName = this.getAttribute('data-student-name');
-                var currentFee = this.getAttribute('data-current-fee');
-                var month = this.getAttribute('data-month');
-                var year = this.getAttribute('data-year');
-                var searchQuery = this.getAttribute('data-search-query');
-                var returnTo = this.getAttribute('data-return-to');
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var editCustomFeeModalElement = document.getElementById('editCustomFeeModal');
+            var editCustomFeeModal = new bootstrap.Modal(editCustomFeeModalElement);
 
-                editCustomFeeModalElement.querySelector('#modal_tuition_id').value = tuitionId;
-                editCustomFeeModalElement.querySelector('#modal_student_name').value = studentName;
-                editCustomFeeModalElement.querySelector('#custom_fee').value = (currentFee === 'Mặc định' || currentFee === '0') ? '' : currentFee;
-                editCustomFeeModalElement.querySelector('#modal_month').value = month;
-                editCustomFeeModalElement.querySelector('#modal_year').value = year;
-                editCustomFeeModalElement.querySelector('#modal_search_query').value = searchQuery;
-                editCustomFeeModalElement.querySelector('#modal_return_to').value = returnTo;
-                editCustomFeeModalElement.querySelector('.modal-title').textContent = 'Chỉnh sửa Học phí tùy chỉnh cho ' + studentName;
+            document.querySelectorAll('.edit-tuition-btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    var tuitionId = this.getAttribute('data-tuition-id');
+                    var studentName = this.getAttribute('data-student-name');
+                    var currentFee = this.getAttribute('data-current-fee');
+                    var month = this.getAttribute('data-month');
+                    var year = this.getAttribute('data-year');
+                    var searchQuery = this.getAttribute('data-search-query');
+                    var returnTo = this.getAttribute('data-return-to');
 
-                editCustomFeeModal.show();
-                console.log('Modal show function called'); // Add this line
+                    editCustomFeeModalElement.querySelector('#modal_tuition_id').value = tuitionId;
+                    editCustomFeeModalElement.querySelector('#modal_student_name').value = studentName;
+                    editCustomFeeModalElement.querySelector('#custom_fee').value = (currentFee === 'Mặc định' || currentFee === '0') ? '' : currentFee;
+                    editCustomFeeModalElement.querySelector('#modal_month').value = month;
+                    editCustomFeeModalElement.querySelector('#modal_year').value = year;
+                    editCustomFeeModalElement.querySelector('#modal_search_query').value = searchQuery;
+                    editCustomFeeModalElement.querySelector('#modal_return_to').value = returnTo;
+                    editCustomFeeModalElement.querySelector('.modal-title').textContent = 'Chỉnh sửa Học phí tùy chỉnh cho ' + studentName;
+
+                    editCustomFeeModal.show();
+                });
             });
+
+            {% if get_flashed_messages(category_filter=['success']) %}
+                var myModalEl = document.getElementById('editCustomFeeModal');
+                var modal = bootstrap.Modal.getInstance(myModalEl);
+                if (modal) {
+                    modal.hide();
+                }
+            {% endif %}
         });
+    </script>
 
-        // Auto-close modal if a success flash message is present
-        {% if get_flashed_messages(category_filter=['success']) %}
-            var myModalEl = document.getElementById('editCustomFeeModal');
-            var modal = bootstrap.Modal.getInstance(myModalEl);
-            if (modal) {
-                modal.hide();
-            }
-        {% endif %}
-    });
-</script>
-
-<nav aria-label="Page navigation" class="mt-3">
+    <nav aria-label="Page navigation" class="mt-3">
         <ul class="pagination justify-content-center">
             {% if pagination.has_prev %}
             <li class="page-item"><a class="page-link" href="{{ url_for('tuition_management', page=pagination.prev_num, search_query=search_query, month=month, year=year, grade_filter=grade_filter, payment_status=payment_status, per_page=per_page) }}">Trước</a></li>
@@ -232,6 +225,5 @@
             {% endif %}
         </ul>
     </nav>
-
-
+</div>
 {% endblock %}
