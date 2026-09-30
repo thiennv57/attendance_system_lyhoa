@@ -287,6 +287,10 @@ app.config['SQLALCHEMY_BINDS'] = {
 }
 print(f"SQLALCHEMY_BINDS: {app.config['SQLALCHEMY_BINDS']}")
 app.config['UPLOAD_FOLDER'] = 'uploads'
+# Ghi nhớ đăng nhập trong 15 ngày
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=15)
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
 
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
@@ -370,7 +374,8 @@ def login():
         user = db.session.query(User).filter_by(username=username).first()
 
         if user and check_password_hash(user.password, password):
-            login_user(user)
+            remember = request.form.get('remember') == 'on'
+            login_user(user, remember=remember)
             return redirect(url_for('dashboard'))
         flash('Invalid username or password', 'danger')
     return render_template('login.html')
