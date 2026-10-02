@@ -35,6 +35,7 @@ DOUBLE_SLOT_VALUE = '__double_slot__'
 ATTENDANCE_COMMENT_SUPPORTED = hasattr(Attendance, 'comment')
 DEFAULT_TEST_ATTEMPT_COUNT = 10
 TUITION_RATE_PER_PRESENT = 120000
+TUITION_RATE_SATURDAY = 200000
 TEST_SCORE_PATTERN = re.compile(r'^(?:10(?:\.0+)?|[0-9](?:\.\d+)?)$')
 TEST_ATTEMPT_LABELS = {
     1: 'Lần 1',
@@ -115,7 +116,14 @@ def sort_students_for_display(students_list):
     )
 
 
-def get_present_counts_for_month(student_ids, month, year):
+def get_tuition_rate_for_date(session_date):
+    # isoweekday(): Saturday is 6
+    if session_date.isoweekday() == 6:
+        return TUITION_RATE_SATURDAY
+    return TUITION_RATE_PER_PRESENT
+
+
+def get_tuition_amounts_for_month(student_ids, month, year):
     if not student_ids:
         return {}
 
@@ -123,17 +131,20 @@ def get_present_counts_for_month(student_ids, month, year):
     last_day = calendar.monthrange(year, month)[1]
     end_of_month = date(year, month, last_day)
 
-    present_counts = db.session.query(
+    present_records = db.session.query(
         Attendance.student_id,
-        func.count(Attendance.id)
+        Attendance.date
     ).filter(
         Attendance.student_id.in_(student_ids),
         Attendance.date >= start_of_month,
         Attendance.date <= end_of_month,
         Attendance.status == 'present'
-    ).group_by(Attendance.student_id).all()
+    ).all()
 
-    return {student_id: count for student_id, count in present_counts}
+    amounts = {}
+    for student_id, session_date in present_records:
+        amounts[student_id] = amounts.get(student_id, 0) + get_tuition_rate_for_date(session_date)
+    return amounts
 
 
 def parse_optional_score(raw_value):
@@ -910,7 +921,7 @@ def tuition_management():
     # Create a CustomPagination object for rendering in the template
     students_pagination = CustomPagination(students, page, per_page, total)
 
-    present_counts = get_present_counts_for_month([student.id for student in sorted_students], month, year)
+    tuition_amounts = get_tuition_amounts_for_month([student.id for student in sorted_students], month, year)
     tuition_records = {
         tuition.student_id: tuition
         for tuition in Tuition.query.filter(
@@ -923,7 +934,7 @@ def tuition_management():
     tuition_data = []
     tuition_records_changed = False
     for student in students:
-        calculated_amount = present_counts.get(student.id, 0) * TUITION_RATE_PER_PRESENT
+        calculated_amount = tuition_amounts.get(student.id, 0)
         tuition = tuition_records.get(student.id)
         if not tuition:
             tuition = Tuition(
@@ -962,7 +973,7 @@ def tuition_management():
 
     remaining_students = [student for student in sorted_students if student.id not in tuition_records]
     for student in remaining_students:
-        calculated_amount = present_counts.get(student.id, 0) * TUITION_RATE_PER_PRESENT
+        calculated_amount = tuition_amounts.get(student.id, 0)
         tuition = Tuition(
             student_id=student.id,
             month=month,
@@ -979,7 +990,7 @@ def tuition_management():
         if not tuition:
             continue
 
-        calculated_amount = present_counts.get(student.id, 0) * TUITION_RATE_PER_PRESENT
+        calculated_amount = tuition_amounts.get(student.id, 0)
         if tuition.amount_due != calculated_amount:
             tuition.amount_due = calculated_amount
             tuition_records_changed = True
